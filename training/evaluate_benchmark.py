@@ -20,7 +20,7 @@ def evaluate_benchmark(args, input_):
     std_time = round(np.std(time_per_iter), 2)
 
     data = np.array([result['gpu_type'],
-                     result['cuda_version'],
+                     str(result['cuda_version']),
                      result['pytorch_version'],
                      f'{mean_time} +- {std_time}',
                      '-'])

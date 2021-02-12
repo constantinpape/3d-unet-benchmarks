@@ -27,7 +27,7 @@ def evaluate_benchmark(args, input_):
     std_thr = round(np.std(throughputs), 2)
 
     gpu_type = result['gpu_type']
-    # cuda_version = str(result['cuda_version'])
+    cuda_version = str(result['cuda_version'])
     pytorch_version = result['pytorch_version']
     thr = f'{mean_thr} +- {std_thr}'
 
@@ -35,9 +35,8 @@ def evaluate_benchmark(args, input_):
         "Run inference benchmarks after inference benchmarks"
     df = pd.read_csv(args.output)
 
-    # FIXME matching the cuda version doesn't work
     selection = ((df['Gpu-Type'] == gpu_type) &
-                 # (df['Cuda-Version'] == cuda_version) &
+                 (df['Cuda-Version'] == cuda_version) &
                  (df['Pytorch-Version'] == pytorch_version))
     df.loc[selection, 'Inference [MVox/s]'] = thr
 

@@ -1,7 +1,9 @@
 # 3D UNet Benchmarks
 
 Training and inference benchmarks with a 3d-Unet.
-Benchmarks results for EMBL cluster, for training lower is better, for inference higher is better.
+For training lower is better, for inference higher is better.
+
+## EMBL Cluster Results
 
 | Gpu-Type             |   Cuda-Version | Pytorch-Version   | Training [s/iter]   | Inference [MVox/s]   |
 |:---------------------|---------------:|:------------------|:--------------------|:---------------------|
