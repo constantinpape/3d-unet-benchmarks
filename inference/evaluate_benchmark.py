@@ -27,7 +27,7 @@ def evaluate_benchmark(args, input_):
     std_thr = round(np.std(throughputs), 2)
 
     gpu_type = result['gpu_type']
-    cuda_version = str(result['cuda_version'])
+    cuda_version = float(result['cuda_version'])
     pytorch_version = result['pytorch_version']
     thr = f'{mean_thr} +- {std_thr}'
 
@@ -40,6 +40,7 @@ def evaluate_benchmark(args, input_):
                  (df['Pytorch-Version'] == pytorch_version))
     df.loc[selection, 'Inference [MVox/s]'] = thr
 
+    df = df.sort_values(by=['Gpu-Type', 'Cuda-Version'])
     df.to_csv(args.output, index=False)
 
 

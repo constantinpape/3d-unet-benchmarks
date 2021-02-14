@@ -32,6 +32,7 @@ def evaluate_benchmark(args, input_):
                    'Training [s/iter]', 'Inference [MVox/s]']
         df = pd.DataFrame(data[None], columns=columns)
 
+    df = df.sort_values(by=['Gpu-Type', 'Cuda-Version'])
     df.to_csv(args.output, index=False)
 
 

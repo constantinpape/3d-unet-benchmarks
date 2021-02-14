@@ -3,9 +3,15 @@ import time
 from itertools import product
 
 import numpy as np
-from tqdm import tqdm
 import torch
 import torch.cuda.amp as amp
+
+try:
+    from tqdm import tqdm
+except ImportError:
+
+    def tqdm(x):
+        return x
 
 
 def product1d(inrange):
