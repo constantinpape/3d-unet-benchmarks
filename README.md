@@ -3,7 +3,7 @@
 Training and inference benchmarks with a 3d-Unet.
 For training lower is better, for inference higher is better.
 
-## EMBL Cluster Results
+## EMBL Cluster Results 
 
 | Gpu-Type             |   Cuda-Version | Pytorch-Version   | Training [s/iter]   | Inference [MVox/s]   |
 |:---------------------|---------------:|:------------------|:--------------------|:---------------------|
@@ -17,3 +17,6 @@ For training lower is better, for inference higher is better.
 | GeForce RTX 3090     |           11.1 | 1.7.1             | 0.43 +- 0.22        | 57.97 +- 4.68        |
 | Tesla V100-SXM2-32GB |           11.0 | 1.7.1             | 1.87 +- 0.09        | 15.97 +- 0.25        |
 | Tesla V100-SXM2-32GB |           11.1 | 1.7.1             | 0.40 +- 0.12        | 61.68 +- 2.53        |
+
+Note: for all benchmarks the same block size for training (48 x 384 x 384 voxels) and inference (64 x 448 x 448 voxels) was used, chosen s.t. it filled the RAM of the 2080Ti.
+The torch for cuda version `11.0` is from conda, `11.1` is the version built with easybuild.
