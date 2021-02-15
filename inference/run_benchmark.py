@@ -8,9 +8,10 @@ DEFAULT_TMP = os.path.join(DEFAULT_ROOT, 'slurm')
 DEFAULT_RES = os.path.join(DEFAULT_ROOT, 'results')
 
 
-# run benchmakr from the current conda environment
+# run benchmark from the current conda environment
 def generate_batchscript_conda(script_file, gpu_type, output,
-                               qos='normal', n_gpus=1):
+                               qos='normal', n_gpus=1,
+                               use_easybuild_torch=False):
     # allocate 6 cores per gpu
     n_cores = 4 * n_gpus
     # allocate 12 GB per gpu
@@ -20,7 +21,18 @@ def generate_batchscript_conda(script_file, gpu_type, output,
     script_path = os.path.join(this_path, 'inference_benchmark.py')
     time_lim = '0-1:00'
 
-    env_name = os.environ['CONDA_DEFAULT_ENV']
+    # use a conda env with normal torch setup
+    def _default_torch(f):
+        env_name = os.environ['CONDA_DEFAULT_ENV']
+        f.write("module purge\n")
+        f.write("module load GCC\n")
+        f.write(f"source activate {env_name}\n")
+
+    # use a conda env which has the easybuild torch linked
+    # see for https://github.com/kreshuklab/gpu_envs details
+    def _easybuild_torch(f):
+        f.write(f"source activate_gpu_env\n")
+
     with open(script_file, 'w') as f:
         f.write("#! /bin/bash\n")
         f.write("#SBATCH -A kreshuk\n")
@@ -33,9 +45,10 @@ def generate_batchscript_conda(script_file, gpu_type, output,
         f.write("#SBATCH --gres=gpu:%i\n" % n_gpus)
         f.write(f"#SBATCH --qos={qos}\n")
         f.write("\n")
-        f.write("module purge\n")
-        f.write(f"module load GCC\n")
-        f.write(f"source activate {env_name}\n")
+        if use_easybuild_torch:
+            _easybuild_torch(f)
+        else:
+            _default_torch(f)
         f.write(f"python {script_path} -o {output}\n")
     st = os.stat(script_file)
     os.chmod(script_file, st.st_mode | stat.S_IEXEC)
@@ -77,6 +90,7 @@ def main():
     parser.add_argument('--n_gpus', '-n', type=int, default=1)
     parser.add_argument('--tmp_dir', '-t', type=str, default=DEFAULT_TMP)
     parser.add_argument('--res_dir', '-r', type=str, default=DEFAULT_RES)
+    parser.add_argument('--use_easybuild_torch', '-e', type=int, default=0)
     args = parser.parse_args()
 
     gpu_type = args.gpu_type
@@ -95,7 +109,8 @@ def main():
         output += '-conda'
         generate_batchscript_conda(script_file, gpu_type, output,
                                    qos='normal',
-                                   n_gpus=n_gpus)
+                                   n_gpus=n_gpus,
+                                   use_easybuild_torch=bool(args.use_easybuild_torch))
     else:
         output += '-easybuild'
         generate_batchscript_easybuild(script_file, gpu_type, output, n_gpus)

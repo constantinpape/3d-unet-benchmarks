@@ -57,6 +57,7 @@ class EMDataset(Dataset):
                  raw_key, label_key,
                  patch_size,
                  raw_transform, target_transform,
+                 dtype=torch.float32,
                  transform=None):
         super().__init__()
         assert len(patch_size) == 3
@@ -71,6 +72,8 @@ class EMDataset(Dataset):
         self.raw_transform = raw_transform
         self.target_transform = target_transform
         self.transform = transform
+
+        self.dtype = dtype
 
         # compute the number of samples for each volume
         self._len = self._compute_sample_len()
@@ -115,7 +118,7 @@ class EMDataset(Dataset):
             pass
         else:
             raise RuntimeError
-        return tensor
+        return tensor.to(dtype=self.dtype)
 
     # fetch the training sample given its index
     def __getitem__(self, idx):
