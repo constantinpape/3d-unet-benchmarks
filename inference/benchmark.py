@@ -11,25 +11,43 @@ extra_path = os.path.join(os.path.split(__file__)[0], '..')
 sys.path.append(extra_path)
 import bench_util
 
-DEFAULT_MODEL_PATH = '/scratch/pape/gpu_benchmark/results/train_benchmark_2080Ti-conda-model.pt'
-# DEFAULT_DATA_PATH = '/g/kreshuk/data/benchmark/sample_A_20160501.hdf'
-DEFAULT_DATA_PATH = '/scratch/pape/gpu_benchmark/sample_A_padded_20160501.hdf'
-DEFAULT_RAW = 'volumes/raw'
+ROOT = os.environ.get('GPU_BENCHMARK_ROOT', '/scratch/pape/gpu_benchmark')
+MODEL_PATH = os.path.join(ROOT, 'results', 'model.pt')
 
-DEFAULT_BLOCK_SIZE = [32, 384, 384]
-DEFAULT_HALO = [16, 32, 32]
+DEFAULT_DATA_PATH = os.path.join(ROOT, 'sample_A_padded_20160501.hdf')
+DEFAULT_RAW = 'volumes/raw'
+DEFAULT_CONFIG = os.path.join(ROOT, 'inference_config.json')
+
+PRECISION = ('single', 'half')
 
 
 def inference_benchmark(args):
-    model = torch.load(args.model)
+    precision = args.precision
+    assert precision in PRECISION
 
-    print("Start inference benchmark with block shape", args.block_shape)
+    if not os.path.exists(MODEL_PATH):
+        print("Could not find a saved model in", MODEL_PATH, ". Run a traning benchmark with argument '--save_model 1' to generate it.")
+        exit(1)
+    model = torch.load(MODEL_PATH)
+
+    # TODO allow special configs for gpus
+    with open(args.config) as f:
+        config = json.load(f)
+    # check if we have a special config for this precision,
+    # otherwise load the default one
+    config = config.get(precision, config['default'])
+
+    block_size = config['block_size']
+    halo = config['halo']
+
+    print("Start inference benchmark with block size", block_size, "and halo", halo)
     with h5py.File(args.data, mode='r') as f:
         ds = f[args.raw]
         total_time, time_per_block = bench_util.run_inference(
             ds, model,
-            args.block_shape, args.halo,
-            preprocess=bench_util.normalize
+            block_size, halo,
+            preprocess=bench_util.normalize,
+            precision=precision
         )
 
     torch_version = torch.__version__
@@ -37,8 +55,9 @@ def inference_benchmark(args):
     output_prefix = args.output
     gpu_type = torch.cuda.get_device_name(torch.device('cuda'))
     bench_results = {
-        'patch_size': args.block_shape,
-        'halo': args.halo,
+        'block_size': block_size,
+        'precision': precision,
+        'halo': halo,
         'total_inference_time': total_time,
         'time_per_block': time_per_block,
         'cuda_version': cuda_version,
@@ -55,13 +74,11 @@ def inference_benchmark(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model', '-m', default=DEFAULT_MODEL_PATH)
     parser.add_argument('--data', '-d', default=DEFAULT_DATA_PATH)
     parser.add_argument('--raw', '-r', default=DEFAULT_RAW)
     parser.add_argument('--output', '-o', default='inference-benchmark')
-    parser.add_argument('--block_shape', '-b', default=DEFAULT_BLOCK_SIZE,
-                        type=int, nargs=3)
-    parser.add_argument('--halo', default=DEFAULT_HALO, type=int, nargs=3)
+    parser.add_argument('--config', '-c', default=DEFAULT_CONFIG)
+    parser.add_argument('--precision', '-p', default='half')
 
     args = parser.parse_args()
     inference_benchmark(args)

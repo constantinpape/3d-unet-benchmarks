@@ -6,8 +6,11 @@ from glob import glob
 import pandas as pd
 import numpy as np
 
+ROOT = os.environ.get('GPU_BENCHMARK_ROOT', '/scratch/pape/gpu_benchmark')
+DEFAULT_RES = os.path.join(ROOT, 'results')
+
 DEFAULT_TABLE = os.path.split(os.path.abspath(__file__))[0]
-DEFAULT_TABLE = os.path.join(DEFAULT_TABLE, '..', 'results-embl.csv')
+DEFAULT_TABLE = os.path.join(DEFAULT_TABLE, '..', 'results', 'embl.csv')
 
 
 def evaluate_benchmark(args, input_):
@@ -16,7 +19,7 @@ def evaluate_benchmark(args, input_):
         result = json.load(f)
 
     time_per_block = result['time_per_block']
-    block_shape = result['patch_size']
+    block_shape = result['block_size']
     halo = result['halo']
     block_shape = [bs + 2 * ha for bs, ha in zip(block_shape, halo)]
 
@@ -29,18 +32,21 @@ def evaluate_benchmark(args, input_):
     gpu_type = result['gpu_type']
     cuda_version = float(result['cuda_version'])
     pytorch_version = result['pytorch_version']
+    precision = result['precision']
     thr = f'{mean_thr} +- {std_thr}'
 
     assert os.path.exists(args.output),\
-        "Run inference benchmarks after inference benchmarks"
+        "Run inference benchmarks after training benchmarks"
     df = pd.read_csv(args.output)
 
     selection = ((df['Gpu-Type'] == gpu_type) &
                  (df['Cuda-Version'] == cuda_version) &
-                 (df['Pytorch-Version'] == pytorch_version))
+                 (df['Pytorch-Version'] == pytorch_version) &
+                 (df['Precision'] == precision))
     df.loc[selection, 'Inference [MVox/s]'] = thr
+    df.loc[selection, 'Blocks_inf'] = ' x '.join(map(str, block_shape))
 
-    df = df.sort_values(by=['Gpu-Type', 'Cuda-Version'])
+    df = df.sort_values(by=['Gpu-Type', 'Cuda-Version', 'Precision'])
     df.to_csv(args.output, index=False)
 
 
@@ -52,7 +58,7 @@ def evaluate_benchmarks(args, input_folder):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input', '-i', required=True)
+    parser.add_argument('--input', '-i', default=DEFAULT_RES)
     parser.add_argument('--output', '-o', default=DEFAULT_TABLE)
 
     args = parser.parse_args()
