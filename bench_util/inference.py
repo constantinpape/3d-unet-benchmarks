@@ -4,7 +4,6 @@ from itertools import product
 
 import numpy as np
 import torch
-import torch.cuda.amp as amp
 
 try:
     from tqdm import tqdm
@@ -179,10 +178,13 @@ def ensure_5d(tensor):
 # we don't save any output, because this is just for benchmarking purposes
 def run_inference(input_dataset, model,
                   block_shape, halo,
-                  preprocess):
+                  preprocess,
+                  precision):
+    dtype = torch.float32 if precision == 'single' else torch.float16
+
     device = torch.device('cuda')
+    model.to(device, dtype=dtype)
     model.eval()
-    model.to(device)
     shape = input_dataset.shape
 
     full_block_shape = tuple(bs + 2 * ha for bs, ha in zip(block_shape, halo))
@@ -214,11 +216,11 @@ def run_inference(input_dataset, model,
 
             input_ = preprocess(input_)
             input_ = ensure_5d(input_)
+
             t0 = time.time()
-            with amp.autocast():
-                input_ = torch.from_numpy(input_).to(device)
-                output = model(input_)
-                output = output.cpu().numpy()
+            input_ = torch.from_numpy(input_).to(device, dtype=dtype)
+            output = model(input_)
+            output = output.cpu().to(dtype=torch.float32).numpy()
             per_block_times.append(time.time() - t0)
 
             # this is where we would save the output ...

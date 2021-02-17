@@ -7,6 +7,7 @@ class UNet(nn.Module):
     Arguments:
       in_channels: number of input channels
       out_channels: number of output channels
+      base_features: number of features on first level, will be doubled in every level
       final_activation: activation applied to the network output
     """
 
@@ -18,10 +19,12 @@ class UNet(nn.Module):
     # Convolutional block for single layer of the decoder / encoder
     # we apply to 2d convolutions with relu activation
     def _conv_block(self, in_channels, out_channels):
-        return nn.Sequential(nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1),
-                             nn.ReLU(),
-                             nn.Conv3d(out_channels, out_channels, kernel_size=3, padding=1),
-                             nn.ReLU())
+        return nn.Sequential(nn.Conv3d(in_channels, out_channels, kernel_size=3,
+                                       padding=1),
+                             nn.ReLU(inplace=True),
+                             nn.Conv3d(out_channels, out_channels, kernel_size=3,
+                                       padding=1),
+                             nn.ReLU(inplace=True))
 
     # upsampling via transposed 2d convolutions
     def _upsampler(self, in_channels, out_channels):
@@ -45,7 +48,7 @@ class UNet(nn.Module):
         # itnto a nn.ModuleList
 
         # modules of the encoder path
-        features = [base_features * 2 ** i for i in range(self.depth + 1)]
+        features = [base_features * (2 ** i) for i in range(self.depth + 1)]
         self.encoder = nn.ModuleList([self._conv_block(in_channels, features[0]),
                                       self._conv_block(features[0], features[1]),
                                       self._conv_block(features[1], features[2]),
